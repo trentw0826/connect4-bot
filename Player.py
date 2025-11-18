@@ -113,7 +113,7 @@ class AIPlayer:
         
         if maximizing_player:
             max_eval = float('-inf')
-            for move in moves:
+            for move in valid_moves:
                 new_board = np.copy(board)
                 make_move(new_board, move, self.player_number)
                 eval_score = self.minimax(new_board, depth - 1, alpha, beta, False)
@@ -124,7 +124,7 @@ class AIPlayer:
             return max_eval
         else:
             min_eval = float('+inf')
-            for move in moves:
+            for move in valid_moves:
                 new_board = np.copy(board)
                 make_move(new_board, move, self.other_player_number)
                 eval_score = self.minimax(new_board, depth - 1, alpha, beta, True)
