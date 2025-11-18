@@ -5,6 +5,9 @@
 import numpy as np
 
 
+DEFAULT_DEPTH_LIMIT = 3
+
+
 class AIPlayer:
     def __init__(self, player_number, name, ptype, param):
         self.player_number = player_number
@@ -15,22 +18,21 @@ class AIPlayer:
 
         #Parameters for the different agents
         
-        self.depth_limit = 3 #default depth-limit - change if you desire
+        self.depth_limit = DEFAULT_DEPTH_LIMIT
         #Alpha-beta
-        # Example of using command line param to overwrite depth limit
         if self.type == 'ab' and param:
             self.depth_limit = int(param)
 
-        #Expectimax
-        # Example of using command line param to overwrite depth limit
-        if self.type == 'expmax' and param:
-            self.depth_limit = int(param)
+        # #Expectimax
+        # # Example of using command line param to overwrite depth limit
+        # if self.type == 'expmax' and param:
+        #     self.depth_limit = int(param)
 
-        #MCTS
-        self.max_iterations = 1000 #Default max-iterations for MCTS - change if you desire
-        # Example of using command line param to overwrite max-iterations for MCTS
-        if self.type == 'mcts' and param:
-            self.max_iterations = int(param)
+        # #MCTS
+        # self.max_iterations = 1000 #Default max-iterations for MCTS - change if you desire
+        # # Example of using command line param to overwrite max-iterations for MCTS
+        # if self.type == 'mcts' and param:
+        #     self.max_iterations = int(param)
 
     def get_alpha_beta_move(self, board):
         """
@@ -50,14 +52,87 @@ class AIPlayer:
                 - spaces that are occupied by player 2 have a 2 in them
 
         RETURNS:
-        The 0 based index of the column that represents the next move
+        The 0-indexed column representing the next move
         """
-        moves = get_valid_moves(board)
-        best_move = np.random.choice(moves)
-
-        #YOUR ALPHA-BETA CODE GOES HERE
+        valid_moves = get_valid_moves(board)
+        if not valid_moves:
+            return None
+            
+        best_move = valid_moves[0]
+        best_value = float('-inf')
+        alpha = float('-inf')
+        beta = float('+inf')
+        
+        # Try each valid move
+        for move in valid_moves:
+            # Apply move to a copy of the board
+            new_board = np.copy(board)
+            make_move(new_board, move, self.player_number)
+            
+            # Get the minimax value for this move (opponent's turn, so minimize)
+            move_value = self.minimax(new_board, self.depth_limit - 1, alpha, beta, False)
+            
+            # Update best move if this move is better
+            if move_value > best_value:
+                best_value = move_value
+                best_move = move
+            
+            # Update alpha for pruning
+            alpha = max(alpha, move_value)
 
         return best_move
+    
+    def minimax(self, board, depth, alpha, beta, maximizing_player):
+        """
+        Minimax algorithm with alpha-beta pruning
+        
+        INPUTS:
+        board - current board state
+        depth - remaining search depth
+        alpha - alpha value for pruning
+        beta - beta value for pruning
+        maximizing_player - True if current player is maximizing, False if minimizing
+        
+        RETURNS:
+        The minimax value of the current board state
+        """
+        # Check if game is won by either player
+        if is_winning_state(board, self.player_number):
+            return 10000 + depth  # Prefer winning sooner
+        elif is_winning_state(board, self.other_player_number):
+            return -10000 - depth  # Avoid losing sooner
+        
+        # Check for tie 
+        valid_moves = get_valid_moves(board)
+        if not valid_moves:
+            return 0
+            
+        # Check for depth limit
+        if depth == 0:
+            return self.evaluation_function(board)
+        
+        if maximizing_player:
+            max_eval = float('-inf')
+            for move in moves:
+                new_board = np.copy(board)
+                make_move(new_board, move, self.player_number)
+                eval_score = self.minimax(new_board, depth - 1, alpha, beta, False)
+                max_eval = max(max_eval, eval_score)
+                alpha = max(alpha, eval_score)
+                if beta <= alpha:
+                    break  # Pruning step
+            return max_eval
+        else:
+            min_eval = float('+inf')
+            for move in moves:
+                new_board = np.copy(board)
+                make_move(new_board, move, self.other_player_number)
+                eval_score = self.minimax(new_board, depth - 1, alpha, beta, True)
+                min_eval = min(min_eval, eval_score)
+                beta = min(beta, eval_score)
+                if beta <= alpha:
+                    break  # Pruning step
+            return min_eval
 
 
     def get_mcts_move(self, board):
@@ -269,7 +344,7 @@ class MCTSNode:
     def print_tree(self):
         #Debugging utility that will print the whole subtree starting at this node
         print("****")
-        print_node(self)
+        self.print_node()
         for m in self.moves:
             if self.children[m]:
                 self.children[m].print_tree()
@@ -422,14 +497,14 @@ def is_winning_state(board, player_num):
         for op in [None, np.fliplr]:
             op_board = op(b) if op else b
             
-            root_diag = np.diagonal(op_board, offset=0).astype(np.int)
+            root_diag = np.diagonal(op_board, offset=0).astype(int)
             if player_win_str in to_str(root_diag):
                 return True
 
             for i in range(1, b.shape[1]-3):
                 for offset in [i, -i]:
                     diag = np.diagonal(op_board, offset=offset)
-                    diag = to_str(diag.astype(np.int))
+                    diag = to_str(diag.astype(int))
                     if player_win_str in diag:
                         return True
 
