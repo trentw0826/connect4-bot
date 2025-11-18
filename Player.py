@@ -133,9 +133,39 @@ class AIPlayer:
         The utility value for the current board
         """
 
-        #YOUR EVALUATION FUNCTION GOES HERE
+        score = 0
+        ROWS, COLS = board.shape
 
-        return 0
+        # Center column preference (central control is important)
+        center_array = board[:, COLS // 2]
+        center_count = np.count_nonzero(center_array == self.player_number)
+        score += center_count * 3
+
+        # Horizontal windows
+        for r in range(ROWS):
+            for c in range(COLS - 3):
+                window = board[r, c:c + 4]
+                score += evaluate_window(window, self.player_number)
+
+        # Vertical windows
+        for c in range(COLS):
+            for r in range(ROWS - 3):
+                window = board[r:r + 4, c]
+                score += evaluate_window(window, self.player_number)
+
+        # Positive diagonals (\)
+        for r in range(ROWS - 3):
+            for c in range(COLS - 3):
+                window = [board[r + i][c + i] for i in range(4)]
+                score += evaluate_window(window, self.player_number)
+
+        # Negative diagonals (/)
+        for r in range(3, ROWS):
+            for c in range(COLS - 3):
+                window = [board[r - i][c + i] for i in range(4)]
+                score += evaluate_window(window, self.player_number)
+
+        return score
 
 
 class RandomPlayer:
@@ -409,3 +439,24 @@ def is_winning_state(board, player_num):
             check_verticle(board) or
             check_diagonal(board))
 
+
+def evaluate_window(window, player):
+    """Evaluate a 4-cell window for the given player."""
+    opponent = 2 if player == 1 else 1
+    score = 0
+    
+    count_player = np.count_nonzero(window == player)
+    count_opponent = np.count_nonzero(window == opponent)
+    count_empty = np.count_nonzero(window == 0)
+
+    if count_player == 4 or count_opponent == 4:
+        raise ValueError("Evaluation function: winning state detected.")
+    elif count_player == 3 and count_empty == 1:
+        score += 5  # winning opportunity
+    elif count_player == 2 and count_empty == 2:
+        score += 2  
+
+    if count_opponent == 3 and count_empty == 1:
+        score -= 4  # block opponent threat
+
+    return score
