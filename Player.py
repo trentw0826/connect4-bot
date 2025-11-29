@@ -160,33 +160,33 @@ class AIPlayer:
         print('MCTS chooses action', root.max_child())
         return root.max_child()
 
-    def get_expectimax_move(self, board):
-        """
-        Given the current state of the board, return the next move based on
-        the expectimax algorithm.
+    # def get_expectimax_move(self, board):
+    #     """
+    #     Given the current state of the board, return the next move based on
+    #     the expectimax algorithm.
 
-        This will play against the random player, who chooses any valid move
-        with equal probability
+    #     This will play against the random player, who chooses any valid move
+    #     with equal probability
 
-        INPUTS:
-        board - a numpy array containing the state of the board using the
-                following encoding:
-                - the board maintains its same two dimensions
-                    - row 0 is the top of the board and so is
-                      the last row filled
-                - spaces that are unoccupied are marked as 0
-                - spaces that are occupied by player 1 have a 1 in them
-                - spaces that are occupied by player 2 have a 2 in them
+    #     INPUTS:
+    #     board - a numpy array containing the state of the board using the
+    #             following encoding:
+    #             - the board maintains its same two dimensions
+    #                 - row 0 is the top of the board and so is
+    #                   the last row filled
+    #             - spaces that are unoccupied are marked as 0
+    #             - spaces that are occupied by player 1 have a 1 in them
+    #             - spaces that are occupied by player 2 have a 2 in them
 
-        RETURNS:
-        The 0 based index of the column that represents the next move
-        """
-        moves = get_valid_moves(board)
-        best_move = np.random.choice(moves)
+    #     RETURNS:
+    #     The 0 based index of the column that represents the next move
+    #     """
+    #     moves = get_valid_moves(board)
+    #     best_move = np.random.choice(moves)
         
-        #YOUR EXPECTIMAX CODE GOES HERE
+    #     # TODO Implement expectimax
 
-        return best_move
+    #     return best_move
 
 
     def evaluation_function(self, board):
@@ -327,9 +327,7 @@ class MCTSNode:
         for m in self.moves:
             self.children[m] = None
 
-        #Set up stats for MCTS
-        #Number of visits to this node
-        self.n = 0 
+        self.n = 0  # Number of visits to this node
 
         #Total number of wins from this node (win = +1, loss = -1, tie = +0)
         # Note: these wins are from the perspective of the PARENT node of this node
@@ -373,12 +371,11 @@ class MCTSNode:
         return max_m
 
     def upper_bound(self, N):
-        #This function returns the UCB for this node
-        #N is the number of samples for the parent node, to be used in UCB calculation
-
-        # YOUR MCTS TASK 1 CODE GOES HERE
-
-        #To do: return the UCB for this node (look in __init__ to see the values you can use)
+        #Calculate the UCB value for this node
+        if self.n > 0:
+            exploitation = self.w / self.n
+            exploration = self.c * np.sqrt(np.log(N) / self.n)
+            return exploitation + exploration
 
         return 0
 
