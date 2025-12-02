@@ -5,9 +5,6 @@
 import numpy as np
 
 
-DEFAULT_DEPTH_LIMIT = 3
-
-
 class AIPlayer:
     def __init__(self, player_number, name, ptype, param):
         self.player_number = player_number
@@ -18,7 +15,7 @@ class AIPlayer:
 
         #Parameters for the different agents
         
-        self.depth_limit = DEFAULT_DEPTH_LIMIT
+        self.depth_limit = 4 #Default depth limit for minimax-based agents
         #Alpha-beta
         if self.type == 'ab' and param:
             self.depth_limit = int(param)
@@ -28,11 +25,10 @@ class AIPlayer:
         # if self.type == 'expmax' and param:
         #     self.depth_limit = int(param)
 
-        # #MCTS
-        # self.max_iterations = 1000 #Default max-iterations for MCTS - change if you desire
-        # # Example of using command line param to overwrite max-iterations for MCTS
-        # if self.type == 'mcts' and param:
-        #     self.max_iterations = int(param)
+        #MCTS
+        self.max_iterations = 10000 #Default max-iterations for MCTS
+        if self.type == 'mcts' and param:
+            self.max_iterations = int(param)
 
     def get_alpha_beta_move(self, board):
         """
@@ -418,36 +414,57 @@ class MCTSNode:
         #This function will simulate a random game from this node's state and then call back on its 
         #parent with the result
 
-        # YOUR MCTS TASK 2 CODE GOES HERE
-
-        # Pseudocode in comments:
-        #################################
-        # If this state is terminal (meaning the game is over) AND it is a winning state for self.other_player_number
-        #   Then we are done and the result is 1 (since this is from parent's perspective)
-        #
-        # Else-if this state is terminal AND is a winning state for self.player_number
-        #   Then we are done and the result is -1 (since this is from parent's perspective)
-        #
-        # Else-if this is not a terminal state (if it is terminal and a tie (no-one won, then result is 0))
-        #   Then we need to perform the random rollout
-        #      1. Make a copy of the board to modify
-        #      2. Keep track of which player's turn it is (first turn is current nodes self.player_number)
-        #      3. Until the game is over: 
-        #            3.1  Make a random move for the player who's turn it is
-        #            3.2  Check to see if someone won or the game ended in a tie 
-        #                 (Hint: you can check for a tie if there are no more valid moves)
-        #            3.3  If the game is over, store the result
-        #            3.4  If game is not over, change the player and continue the loop
-        #
-        # Update this node's total reward (self.w) and visit count (self.n) values to reflect this visit and result
-
-
-        # Back-propagate this result
-        # You do this by calling back on the parent of this node with the result of this simulation
-        #    This should look like: self.parent.back(result)
-        # Tip: you need to negate the result to account for the fact that the other player
-        #    is the actor in the parent node, and so the scores will be from the opposite perspective
-        pass
+        result = 0  # Default result is a tie
+        
+        # Check if this is a terminal state
+        if self.terminal:
+            # If the other player (parent's player) won, result is 1 from parent's perspective
+            if is_winning_state(self.board, self.other_player_number):
+                result = 1
+            # If this player won, result is -1 from parent's perspective
+            elif is_winning_state(self.board, self.player_number):
+                result = -1
+            # Otherwise it's a tie, result stays 0
+        else:
+            # Perform random rollout
+            sim_board = np.copy(self.board)
+            current_player = self.player_number
+            other_player = self.other_player_number
+            
+            # Continue until game is over
+            while True:
+                # Get valid moves and check if game can continue
+                valid_moves = get_valid_moves(sim_board)
+                
+                # If no valid moves, it's a tie
+                if len(valid_moves) == 0:
+                    result = 0
+                    break
+                
+                # Make a random move for the current player
+                random_move = np.random.choice(valid_moves)
+                make_move(sim_board, random_move, current_player)
+                
+                # Check if current player won
+                if is_winning_state(sim_board, current_player):
+                    # If current player is self.player_number, result is -1 from parent's perspective
+                    if current_player == self.player_number:
+                        result = -1
+                    # If current player is self.other_player_number, result is 1 from parent's perspective
+                    else:
+                        result = 1
+                    break
+                
+                # Switch players
+                current_player, other_player = other_player, current_player
+        
+        # Update this node's stats
+        self.n += 1
+        self.w += result
+        
+        # Back-propagate to parent (negate result for perspective change)
+        if self.parent is not None:
+            self.parent.back(-result)
 
     def back(self, score):
         #This updates the stats for this node, then backpropagates things 
